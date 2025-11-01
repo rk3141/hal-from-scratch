@@ -133,7 +133,8 @@ impl UartRegs {
     }
 
     pub fn transmit_str(&mut self, data: &str) {
-        for i in 0..=(data.len() / 4) {
+        let num_chunks = data.len() / 4 - (data.len()%4 == 0) as usize;
+        for i in 0..=num_chunks {
             let c1: u32 = data.bytes().nth(i * 4 + 0).unwrap_or(0x20).into();
             let c2: u32 = data.bytes().nth(i * 4 + 1).unwrap_or(0x20).into();
             let c3: u32 = data.bytes().nth(i * 4 + 2).unwrap_or(0x20).into();
@@ -158,7 +159,7 @@ impl UartRegs {
     }
 
     pub fn recieve_byte_blocking(&self) -> char {
-        while self.is_fifo_empty() {}
+        while self.is_rxfifo_empty() {}
 
         self.recieve_data()
     }
@@ -169,7 +170,15 @@ impl UartRegs {
     }
 
     #[inline(always)]
-    fn is_fifo_empty(&self) -> bool {
+    fn is_txfifo_full(&self) -> bool {
+        const UART_STAT_TXFF_MASK: u32 = 0x00000080;
+        const UART_STAT_TXFF_SET: u32 = 0x00000080;
+
+        (self.stat & UART_STAT_TXFF_MASK) == UART_STAT_TXFF_SET
+    }
+
+    #[inline(always)]
+    fn is_rxfifo_empty(&self) -> bool {
         const UART_STAT_RXFE_MASK: u32 = 0x00000004;
         const UART_STAT_RXFE_SET: u32 = 0x00000004;
 
